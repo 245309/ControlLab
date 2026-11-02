@@ -30,7 +30,12 @@ export function DiagramNodeView(props: NodeProps) {
       <div className={`diagram-sum ${selected}`}>
         <Handle type="target" position={Position.Left} id="in" />
         <Handle type="target" position={Position.Bottom} id="in-bottom" />
-        <div className="diagram-sum-body">Σ</div>
+        <div className="diagram-sum-body" aria-label="比较点">
+          <svg className="sum-cross" viewBox="0 0 36 36" aria-hidden="true">
+            <line x1="6.5" y1="6.5" x2="29.5" y2="29.5" />
+            <line x1="29.5" y1="6.5" x2="6.5" y2="29.5" />
+          </svg>
+        </div>
         <span className="diagram-sum-label">{label}</span>
         <Handle type="source" position={Position.Right} id="out" />
       </div>

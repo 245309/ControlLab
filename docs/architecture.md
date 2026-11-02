@@ -161,7 +161,7 @@ App.tsx                     布局 + 输入状态 + 工作模式（?mode=diagram
 ├─ ParameterSliders         未知参数滑块 + 精确数值框（公式模式 / 框图模式）
 ├─ FormulaView              G(s) 分式排版
 ├─ diagram/DiagramCanvas    React Flow 画布（Provider + Inner，因为 useReactFlow 必须在 Provider 内）
-│  ├─ diagram/DiagramNodeView  输入/输出胶囊、比较点 Σ、引出点、环节矩形
+│  ├─ diagram/DiagramNodeView  输入/输出胶囊、比较点 ⊗（圆圈内一个叉）、引出点、环节矩形
 │  ├─ diagram/SignedEdge       ±1 徽标连线，点击切换极性
 │  └─ diagram/MasonPanel       前向通路 / 回路 / Δ 展开
 ├─ StabilityPanel           特征方程 + 结论卡 + 三重依据 + Routh 表 + warnings

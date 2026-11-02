@@ -605,7 +605,7 @@ export default function App() {
                     <span className="palette-icon">▭</span> 环节 G(s)
                   </button>
                   <button className="palette-btn" onClick={() => addNode("sum")}>
-                    <span className="palette-icon">Σ</span> 比较点
+                    <span className="palette-icon">⊗</span> 比较点
                   </button>
                   <button className="palette-btn" onClick={() => addNode("takeoff")}>
                     <span className="palette-icon">●</span> 引出点
