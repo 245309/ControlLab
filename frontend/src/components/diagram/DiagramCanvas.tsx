@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import {
   Background,
   Controls,
+  MarkerType,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
@@ -17,10 +18,15 @@ import {
 
 import type { DiagramNodeData } from "../../types/diagram";
 import { DiagramNodeView } from "./DiagramNodeView";
-import { SignedEdge } from "./SignedEdge";
+import { OrthogonalEdge } from "./OrthogonalEdge";
 
 const nodeTypes: NodeTypes = { diagram: DiagramNodeView };
-const edgeTypes: EdgeTypes = { signed: SignedEdge };
+const edgeTypes: EdgeTypes = { orthogonal: OrthogonalEdge };
+
+export const EDGE_DEFAULTS = {
+  type: "orthogonal",
+  markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: "#64748b" },
+} as const;
 
 interface Props {
   nodes: Node<DiagramNodeData>[];
@@ -46,18 +52,22 @@ function DiagramCanvasInner({ nodes, edges, onNodesChange, onEdgesChange, setEdg
   const onConnect = useCallback(
     (connection: Connection) => {
       const target = nodes.find((node) => node.id === connection.target);
-      const isSum = (target?.data as DiagramNodeData | undefined)?.kind === "sum";
-      setEdges((current) =>
-        addEdge(
+      const targetKind = (target?.data as DiagramNodeData | undefined)?.kind;
+      setEdges((current) => {
+        // 同一对节点之间只保留一条线，避免重复回路把 Δ 算歪
+        if (current.some((edge) => edge.source === connection.source && edge.target === connection.target)) {
+          return current;
+        }
+        return addEdge(
           {
             ...connection,
+            ...EDGE_DEFAULTS,
             id: `e-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`,
-            type: "signed",
-            data: { sign: 1, signed: isSum },
+            data: { sign: 1, signed: targetKind === "sum" },
           },
           current,
-        ),
-      );
+        );
+      });
     },
     [nodes, setEdges],
   );
@@ -87,11 +97,12 @@ function DiagramCanvasInner({ nodes, edges, onNodesChange, onEdgesChange, setEdg
         isValidConnection={isValidConnection}
         onNodeClick={(_, node) => onSelectNode(node.id)}
         onPaneClick={() => onSelectNode(null)}
+        defaultEdgeOptions={EDGE_DEFAULTS}
         fitView
-        fitViewOptions={{ padding: 0.25, maxZoom: 1.1 }}
+        fitViewOptions={{ padding: 0.28, maxZoom: 1.1 }}
         proOptions={{ hideAttribution: true }}
-        defaultEdgeOptions={{ type: "signed" }}
         deleteKeyCode={["Delete", "Backspace"]}
+        connectionLineStyle={{ stroke: "#64748b", strokeWidth: 1.6 }}
       >
         <Background gap={18} size={1.4} color="#dbe3ef" />
         <Controls showInteractive={false} />

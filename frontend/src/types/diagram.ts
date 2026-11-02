@@ -4,6 +4,8 @@ export interface DiagramNodeData extends Record<string, unknown> {
   kind: DiagramNodeKind;
   label: string;
   formula?: string;
+  /** 环节方向：true 表示信号从右往左流（反馈支路上的 H(s) 常用反向） */
+  flipped?: boolean;
 }
 
 export interface DiagramNodePayload {

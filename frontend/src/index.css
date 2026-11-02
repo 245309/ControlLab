@@ -1428,3 +1428,35 @@ body {
 .mason-empty {
   color: var(--muted);
 }
+
+/* ---------- 框图：方向切换与直角连线 ---------- */
+.direction-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.direction-toggle button {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #dfe6f3);
+  background: #ffffff;
+  color: #5b6b85;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.direction-toggle button.active {
+  background: #e8f0fe;
+  border-color: #93b4f5;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.diagram-block.flipped {
+  background: #f8fafc;
+}
+
+.react-flow__handle-bottom {
+  bottom: -6px;
+}

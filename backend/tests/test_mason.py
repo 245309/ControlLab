@@ -9,6 +9,31 @@ from app.core.mason import (
 )
 
 
+def test_duplicate_edges_are_counted_once() -> None:
+    nodes = [
+        DiagramNode("r", "input"),
+        DiagramNode("sum", "sum"),
+        DiagramNode("g", "block", "1/(s+1)"),
+        DiagramNode("t", "takeoff"),
+        DiagramNode("h", "block", "2"),
+        DiagramNode("y", "output"),
+    ]
+    edges = [
+        DiagramEdge("r", "sum"),
+        DiagramEdge("sum", "g"),
+        DiagramEdge("g", "t"),
+        DiagramEdge("t", "y"),
+        DiagramEdge("t", "h"),
+        DiagramEdge("h", "sum", -1),
+        # 手滑重复画了同一条反馈线：Mason 结果必须与只画一条时一致
+        DiagramEdge("h", "sum", -1),
+        DiagramEdge("t", "h"),
+    ]
+    result = analyze_diagram(nodes, edges)
+    assert len(result.loops) == 1
+    assert [round(v, 6) for v in result.den] == [1.0, 3.0]
+
+
 def test_series_blocks() -> None:
     nodes = [
         DiagramNode("r", "input"),

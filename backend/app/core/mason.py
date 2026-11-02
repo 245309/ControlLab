@@ -191,7 +191,17 @@ def analyze_diagram(
         if edge.source == edge.target:
             raise ValueError("不支持节点自环，请改用「引出点 + 环节」构成反馈")
 
-    adjacency, parameters = _adjacency(nodes, edges, params)
+    # 同一对节点之间重复画线只算一条：否则回路会被重复计数，Δ 就不对了
+    deduped: list[DiagramEdge] = []
+    seen_pairs: set[tuple[str, str]] = set()
+    for edge in edges:
+        key = (edge.source, edge.target)
+        if key in seen_pairs:
+            continue
+        seen_pairs.add(key)
+        deduped.append(edge)
+
+    adjacency, parameters = _adjacency(nodes, deduped, params)
 
     forward_paths = _forward_paths(adjacency, inputs[0].id, outputs[0].id)
     if not forward_paths:

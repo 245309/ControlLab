@@ -29,6 +29,7 @@ export function DiagramNodeView(props: NodeProps) {
     return (
       <div className={`diagram-sum ${selected}`}>
         <Handle type="target" position={Position.Left} id="in" />
+        <Handle type="target" position={Position.Bottom} id="in-bottom" />
         <div className="diagram-sum-body">Σ</div>
         <span className="diagram-sum-label">{label}</span>
         <Handle type="source" position={Position.Right} id="out" />
@@ -42,16 +43,19 @@ export function DiagramNodeView(props: NodeProps) {
         <Handle type="target" position={Position.Left} id="in" />
         <div className="diagram-takeoff-dot" />
         <Handle type="source" position={Position.Right} id="out" />
+        <Handle type="source" position={Position.Bottom} id="out-bottom" />
       </div>
     );
   }
 
+  // 环节：flipped 时信号从右往左流（反馈支路）
+  const flipped = Boolean(data.flipped);
   return (
-    <div className={`diagram-block ${selected}`}>
-      <Handle type="target" position={Position.Left} id="in" />
+    <div className={`diagram-block ${flipped ? "flipped" : ""} ${selected}`}>
+      <Handle type="target" position={flipped ? Position.Right : Position.Left} id="in" />
       <span className="diagram-block-name">{label || "G"}</span>
       <span className="diagram-block-formula">{data.formula || "1"}</span>
-      <Handle type="source" position={Position.Right} id="out" />
+      <Handle type="source" position={flipped ? Position.Left : Position.Right} id="out" />
     </div>
   );
 }

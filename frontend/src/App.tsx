@@ -11,7 +11,7 @@ import { PoleZeroChart } from "./components/PoleZeroChart";
 import { RootLocusChart } from "./components/RootLocusChart";
 import { StabilityPanel } from "./components/StabilityPanel";
 import { StepResponseChart } from "./components/StepResponseChart";
-import { DiagramCanvas } from "./components/diagram/DiagramCanvas";
+import { DiagramCanvas, EDGE_DEFAULTS } from "./components/diagram/DiagramCanvas";
 import { MasonPanel } from "./components/diagram/MasonPanel";
 import { useAnalysis } from "./hooks/useAnalysis";
 import { parseCoefficients, toTerms } from "./lib/coefficients";
@@ -75,20 +75,25 @@ function defaultLabel(kind: DiagramNodeKind): string {
 
 const INITIAL_NODES: Node<DiagramNodeData>[] = [
   { id: "r", type: "diagram", position: { x: 20, y: 150 }, data: { kind: "input", label: "R(s)" } },
-  { id: "sum", type: "diagram", position: { x: 170, y: 150 }, data: { kind: "sum", label: "E(s)" } },
-  { id: "g", type: "diagram", position: { x: 280, y: 128 }, data: { kind: "block", label: "G(s)", formula: "1/(s+1)" } },
-  { id: "t", type: "diagram", position: { x: 470, y: 150 }, data: { kind: "takeoff", label: "" } },
-  { id: "y", type: "diagram", position: { x: 580, y: 150 }, data: { kind: "output", label: "Y(s)" } },
-  { id: "h", type: "diagram", position: { x: 330, y: 290 }, data: { kind: "block", label: "H(s)", formula: "2" } },
+  { id: "sum", type: "diagram", position: { x: 175, y: 150 }, data: { kind: "sum", label: "E(s)" } },
+  { id: "g", type: "diagram", position: { x: 285, y: 142 }, data: { kind: "block", label: "G(s)", formula: "1/(s+1)" } },
+  { id: "t", type: "diagram", position: { x: 470, y: 155 }, data: { kind: "takeoff", label: "" } },
+  { id: "y", type: "diagram", position: { x: 585, y: 150 }, data: { kind: "output", label: "Y(s)" } },
+  {
+    id: "h",
+    type: "diagram",
+    position: { x: 330, y: 330 },
+    data: { kind: "block", label: "H(s)", formula: "2", flipped: true },
+  },
 ];
 
 const INITIAL_EDGES: Edge[] = [
-  { id: "e1", source: "r", target: "sum", type: "signed", data: { sign: 1, signed: true } },
-  { id: "e2", source: "sum", target: "g", type: "signed", data: { sign: 1, signed: false } },
-  { id: "e3", source: "g", target: "t", type: "signed", data: { sign: 1, signed: false } },
-  { id: "e4", source: "t", target: "y", type: "signed", data: { sign: 1, signed: false } },
-  { id: "e5", source: "t", target: "h", type: "signed", data: { sign: 1, signed: false } },
-  { id: "e6", source: "h", target: "sum", type: "signed", data: { sign: -1, signed: true } },
+  { id: "e1", source: "r", target: "sum", sourceHandle: "out", targetHandle: "in", ...EDGE_DEFAULTS, data: { sign: 1, signed: true } },
+  { id: "e2", source: "sum", target: "g", sourceHandle: "out", targetHandle: "in", ...EDGE_DEFAULTS, data: { sign: 1, signed: false } },
+  { id: "e3", source: "g", target: "t", sourceHandle: "out", targetHandle: "in", ...EDGE_DEFAULTS, data: { sign: 1, signed: false } },
+  { id: "e4", source: "t", target: "y", sourceHandle: "out", targetHandle: "in", ...EDGE_DEFAULTS, data: { sign: 1, signed: false } },
+  { id: "e5", source: "t", target: "h", sourceHandle: "out-bottom", targetHandle: "in", ...EDGE_DEFAULTS, data: { sign: 1, signed: false } },
+  { id: "e6", source: "h", target: "sum", sourceHandle: "out", targetHandle: "in-bottom", ...EDGE_DEFAULTS, data: { sign: -1, signed: true } },
 ];
 
 function readInitial(): { num: string; den: string; formula: string; mode: InputMode } {
@@ -499,7 +504,7 @@ export default function App() {
         </div>
 
         <div className="topbar-right">
-          <span className="version-chip">v0.4.0</span>
+          <span className="version-chip">v0.5.0</span>
           <span className={`status-chip ${loading ? "status-busy" : error ? "status-bad" : "status-ok"}`}>
             <span className="status-dot" />
             {loading ? "计算中" : error ? "解析异常" : "实时分析"}
@@ -665,6 +670,25 @@ export default function App() {
                             ))}
                           </select>
                         </label>
+                        <label className="param-mini">
+                          <span>信号方向</span>
+                          <div className="direction-toggle">
+                            <button
+                              type="button"
+                              className={selectedNode.data.flipped ? "" : "active"}
+                              onClick={() => updateSelected({ flipped: false })}
+                            >
+                              正向 →
+                            </button>
+                            <button
+                              type="button"
+                              className={selectedNode.data.flipped ? "active" : ""}
+                              onClick={() => updateSelected({ flipped: true })}
+                            >
+                              ← 反向
+                            </button>
+                          </div>
+                        </label>
                       </>
                     )}
 
@@ -743,7 +767,7 @@ export default function App() {
       </div>
 
       <footer className="statusbar">
-        <span>ControlLab v0.4.0 · 框图 Mason 求解</span>
+        <span>ControlLab v0.5.0 · 框图 Mason 求解</span>
         <span>拖动节点连线即可搭框图</span>
       </footer>
     </div>
