@@ -1,0 +1,125 @@
+# ControlLab 开发环境（本机实测记录）
+
+> 生成时间：2026-11-02。所有结论均在本机实测得到，可直接照此复现。
+
+## 1. 版本清单
+
+| 组件 | 版本 / 路径 | 备注 |
+| --- | --- | --- |
+| Python | 3.12.10（64-bit, MSC v.1943） | Microsoft Store 版 |
+| Python 真实解释器 | `C:\Users\zhang\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe` | PATH 上的 `python` 是失效的应用执行别名（exit 9009），**不要用** |
+| 项目虚拟环境 | `E:\PY_Projects\Project4\ControlLab\backend\.venv` | 使用上述解释器创建 |
+| pip | 25.0.1（venv 内） | |
+| Node.js | v24.18.0（`D:\Tools\Nodejs`） | |
+| npm | 11.16.0 | |
+| Microsoft Edge | 156.0.4314.58 | `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`，桌面外壳用它 |
+| .NET Framework | 4.8.1（Release 533509） | |
+| .NET SDK 运行时 | 6.0 / 8.0 + WindowsDesktop | |
+| 磁盘 | E: 可用 249.8 GB | |
+
+## 2. 已安装的 Python 依赖
+
+运行期（`backend\requirements.txt`）：
+
+- fastapi 0.162.0
+- uvicorn[standard] 0.54.0
+- numpy 2.5.4
+- scipy 1.18.1
+- sympy 1.14.0
+
+开发/测试：pytest 9.2.0、httpx 0.28.1。
+打包（仅构建时需要，未写入 requirements.txt）：pyinstaller 6.22.3。
+
+> M1 桌面外壳采用 Edge `--app` 模式，因此**不依赖** pywebview / pythonnet；
+> 后两者已从环境移除（本机不可用，原因见第 4 节坑 3）。
+
+## 3. 常用命令
+
+```powershell
+# 后端（开发时热重载）
+cd E:\PY_Projects\Project4\ControlLab\backend
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+
+# 前端
+cd E:\PY_Projects\Project4\ControlLab\frontend
+npm run dev
+
+# 测试（必须在 backend 目录下执行，pytest.ini 的 --basetemp 才会生效）
+cd E:\PY_Projects\Project4\ControlLab\backend
+.venv\Scripts\python.exe -m pytest
+```
+
+## 4. 本机特有的坑（重要）
+
+### 坑 1：以 mode 0o700 创建目录后无法访问
+
+CPython 在 Windows 上会把 `os.mkdir(path, mode)` 的 mode 写进新目录的安全描述符。
+本机沙箱令牌下，`0o700` 的目录**连创建它的进程都打不开**，表现为
+`PermissionError: [WinError 5]`——pip、pytest、PyInstaller 都会中招。
+
+已修复：`backend\.venv\Lib\site-packages\sitecustomize.py` 中把 `os.mkdir` 包一层、忽略 mode 参数。
+该文件随 venv 存在，重建 venv 后需重新写入。
+
+### 坑 2：pip.ini 必须是 UTF-8 无 BOM
+
+带 BOM 的 `pip.ini` 会让 pip 26 报 `File contains no section headers`。
+写入时用 `[IO.File]::WriteAllText(..., New-Object Text.UTF8Encoding($false))`。
+
+### 坑 3：pythonnet / pywebview 在本机不可用
+
+`import clr` 报 `Failed to resolve Python.Runtime.Loader.Initialize`。
+根因：本机把 `Python.Runtime.dll` 判定为「远程来源」——
+`Assembly.LoadFrom` 返回 `0x80131515`，`LoadFile` 提示需启用 `loadFromRemoteSources`；
+但 `Assembly.Load(bytes)` 正常，说明 DLL 本身完好。
+写 `python.exe.config` 无效，pythonnet 3.0.5 / 3.2.1 均失败。
+
+**结论**：桌面外壳改用 Edge `--app=<url>` 打开无边框应用窗口，零额外依赖；
+`desktop\launcher.py` 负责「分配端口 → 启动 uvicorn → 轮询 /health → 开 Edge → 退出时收尾」。
+若将来在正常机器上需要更原生的窗口，可再引入 pywebview 作为可选增强。
+
+### 坑 4：PowerShell 直连 HTTPS 失败
+
+`Invoke-WebRequest` / `curl.exe` 报 `schannel SEC_E_NO_CREDENTIALS`；
+但 **Python urllib 与 Node fetch 正常**，因此 pip / npm 不受影响。
+
+## 5. 镜像与缓存配置
+
+- `backend\.venv\pip.ini`
+  ```ini
+  [global]
+  index-url = https://mirrors.aliyun.com/pypi/simple/
+  trusted-host = mirrors.aliyun.com
+  cache-dir = E:\PY_Projects\Project4\ControlLab\.pip-cache
+  timeout = 60
+  ```
+- `frontend\.npmrc`
+  ```ini
+  registry=https://registry.npmmirror.com
+  cache=E:\PY_Projects\Project4\ControlLab\.npm-cache
+  fund=false
+  audit=false
+  ```
+
+## 6. 已验证的能力
+
+- uvicorn 能在本机回环地址绑定随机端口、响应 `/health`（200）、并干净退出。
+- pytest 默认 basetemp 已可用（删除历史遗留的受限目录 `%TEMP%\dsh-*\pytest-of-zhang` 后修复）。
+- npm 能从 npmmirror 安装包（react 实测 2 秒）。
+
+## 7. 前端与桌面窗口
+
+```powershell
+cd E:\PY_Projects\Project4\ControlLab\frontend
+npm install          # 首次
+npm run build        # tsc --noEmit + vite build -> frontend/dist
+```
+
+- 后端启动时若发现 `frontend/dist`，会自动在 `/` 托管（`app/main.py`），所以桌面模式只需起后端。
+- 桌面启动器：`backend\.venv\Scripts\python.exe desktop\launcher.py`，
+  加 `--no-browser` 只起后端、`--port 8000` 指定端口。
+- 启动器会为 Edge 使用独立配置目录 `ControlLab\.tmp\edge-profile`，不干扰日常浏览器的会话与插件。
+
+> 本机构建注意：`npm install` / `npm run build` 需要派生子进程（esbuild、tsc），
+> 必须在**非沙箱**进程里执行；esbuild 还会在系统临时目录写中间文件，
+> 若遇到 `Access is denied`，把 `TEMP`/`TMP` 指到工作区内（如 `ControlLab\.tmp\build-tmp`）再构建即可。
+> 普通用户直接执行不受影响。
