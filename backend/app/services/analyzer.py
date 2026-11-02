@@ -4,8 +4,13 @@ from __future__ import annotations
 
 import math
 
+import sympy as sp
+
 from ..core.formula import compile_formula
 from ..core.frequency_response import compute_frequency
+from ..core.mason import DiagramEdge as MasonEdge
+from ..core.mason import DiagramNode as MasonNode
+from ..core.mason import analyze_diagram
 from ..core.polynomial import is_zero, strip_leading_zeros
 from ..core.root_locus import LocusData, compute_root_locus
 from ..core.stability import build_routh_table, check_necessary_condition, classify_by_roots
@@ -24,6 +29,8 @@ from ..schemas.analysis import (
     BodeInfo,
     ComplexNumber,
     FrequencyInfo,
+    MasonInfo,
+    MasonPathInfo,
     NecessaryInfo,
     NyquistInfo,
     ParameterInfo,
@@ -100,8 +107,41 @@ def _summary(verdict: str, poles: list[complex], dominant: list[complex], sign_c
 def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
     formula_text: str | None = None
     parameters: list[ParameterInfo] = []
+    mason: MasonInfo | None = None
 
-    if payload.formula and payload.formula.strip():
+    if payload.diagram is not None:
+        mason_result = analyze_diagram(
+            [
+                MasonNode(id=node.id, kind=node.kind, formula=node.formula)
+                for node in payload.diagram.nodes
+            ],
+            [
+                MasonEdge(source=edge.source, target=edge.target, sign=edge.sign)
+                for edge in payload.diagram.edges
+            ],
+            payload.params,
+        )
+        num, den = mason_result.num, mason_result.den
+        parameters = [
+            ParameterInfo(name=name, value=value) for name, value in mason_result.parameters
+        ]
+        mason = MasonInfo(
+            input_id=mason_result.input_id,
+            output_id=mason_result.output_id,
+            forward_paths=[
+                MasonPathInfo(nodes=path.nodes, gain_expr=sp.sstr(path.gain))
+                for path in mason_result.forward_paths
+            ],
+            loops=[
+                MasonPathInfo(nodes=loop.nodes, gain_expr=sp.sstr(loop.gain))
+                for loop in mason_result.loops
+            ],
+            delta_expr=sp.sstr(mason_result.delta),
+            numerator_expr=sp.sstr(mason_result.numerator),
+            denominator_expr=sp.sstr(mason_result.denominator),
+            parameters=parameters,
+        )
+    elif payload.formula and payload.formula.strip():
         formula_text = payload.formula.strip()
         compiled = compile_formula(formula_text, payload.params)
         num, den = compiled.num, compiled.den
@@ -280,5 +320,6 @@ def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
         root_locus=root_locus,
         parameters=parameters,
         formula=formula_text,
+        diagram=mason,
         warnings=warnings,
     )

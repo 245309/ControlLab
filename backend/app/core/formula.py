@@ -106,16 +106,14 @@ def evaluate_expression(text: str) -> sp.Expr:
         raise ValueError(f"公式无法解析，请检查括号与运算符是否配对（{detail}）") from exc
 
 
-def compile_formula(text: str, params: dict[str, float] | None = None) -> FormulaResult:
+def _substitute(expr: sp.Expr, params: dict[str, float] | None) -> tuple[sp.Expr, list[tuple[str, float]]]:
+    """把表达式里的未知参数替换成具体数值，返回 (新表达式, 参数表)。"""
     symbol = sp.Symbol("s")
-    expr = evaluate_expression(text)
-
-    free_symbols = sorted(expr.free_symbols - {symbol}, key=lambda item: item.name)
     values = params or {}
     parameters: list[tuple[str, float]] = []
     substitutions: dict[sp.Symbol, sp.Expr] = {}
 
-    for item in free_symbols:
+    for item in sorted(expr.free_symbols - {symbol}, key=lambda sym: sym.name):
         raw = values.get(item.name, DEFAULT_PARAM_VALUE)
         try:
             value = float(raw)
@@ -126,12 +124,29 @@ def compile_formula(text: str, params: dict[str, float] | None = None) -> Formul
         substitutions[item] = sp.Float(value, 15)
         parameters.append((item.name, round(value, 6)))
 
-    # 注意：这里不能用 simplify —— 它会把分子分母的公因子约掉，
-    # 而控制理论里「有零极点对消」和「没有」的表达式应当保持用户输入的样子。
-    substituted = expr.subs(substitutions)
+    if not substitutions:
+        return expr, parameters
+    return expr.subs(substitutions), parameters
+
+
+def compile_gain(text: str, params: dict[str, float] | None = None) -> tuple[sp.Expr, list[tuple[str, float]]]:
+    """把环节表达式编译成关于 s 的有理式（参数已代入），供 Mason 公式连乘。"""
+    expr = evaluate_expression(text)
+    substituted, parameters = _substitute(expr, params)
+    if substituted.has(sp.zoo) or substituted.has(sp.nan):
+        raise ValueError("环节表达式在给定参数下无意义")
+    return sp.together(substituted), parameters
+
+
+def compile_formula(text: str, params: dict[str, float] | None = None) -> FormulaResult:
+    symbol = sp.Symbol("s")
+    expr = evaluate_expression(text)
+    substituted, parameters = _substitute(expr, params)
     if substituted.has(sp.zoo) or substituted.has(sp.nan):
         raise ValueError("公式在给定参数下无意义")
 
+    # 注意：这里不能用 simplify —— 它会把分子分母的公因子约掉，
+    # 而控制理论里「有零极点对消」和「没有」的表达式应当保持用户输入的样子。
     combined = sp.together(substituted)
     num_expr, den_expr = sp.fraction(combined)
     num = _poly_coeffs(sp.expand(num_expr), symbol)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -16,22 +18,50 @@ class AnalyzeOptions(BaseModel):
     k_max: float | None = Field(default=None, gt=0.0, le=1e12, description="根轨迹最大增益，缺省自动")
 
 
+class DiagramNodeInfo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=64)
+    kind: Literal["input", "output", "sum", "takeoff", "block"]
+    label: str | None = Field(default=None, max_length=40)
+    formula: str | None = Field(default=None, max_length=200, description="环节增益表达式，如 1/(s+1)")
+
+
+class DiagramEdgeInfo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str | None = Field(default=None, max_length=64)
+    source: str
+    target: str
+    sign: int = Field(default=1, ge=-1, le=1, description="进入比较点的符号：+1 或 -1")
+
+
+class DiagramInfo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    nodes: list[DiagramNodeInfo] = Field(min_length=1)
+    edges: list[DiagramEdgeInfo] = Field(default_factory=list)
+
+
 class AnalyzeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     num: list[float] | None = Field(default=None, min_length=1, description="分子系数，降幂")
     den: list[float] | None = Field(default=None, min_length=1, description="分母系数，降幂")
     formula: str | None = Field(default=None, description="传递函数表达式，如 K/(s*(s+1))")
-    params: dict[str, float] = Field(default_factory=dict, description="公式中的未知参数取值")
+    diagram: DiagramInfo | None = Field(default=None, description="系统结构框图")
+    params: dict[str, float] = Field(default_factory=dict, description="公式/环节中的未知参数取值")
     options: AnalyzeOptions = Field(default_factory=AnalyzeOptions)
 
     @model_validator(mode="after")
     def _check_source(self) -> "AnalyzeRequest":
         if self.formula and self.formula.strip():
             return self
+        if self.diagram is not None:
+            return self
         if self.num is not None and self.den is not None:
             return self
-        raise ValueError("请提供 num/den 系数，或提供 formula 表达式")
+        raise ValueError("请提供 num/den 系数、formula 表达式或 diagram 框图")
 
 
 
@@ -146,6 +176,22 @@ class ParameterInfo(BaseModel):
     value: float
 
 
+class MasonPathInfo(BaseModel):
+    nodes: list[str]
+    gain_expr: str
+
+
+class MasonInfo(BaseModel):
+    input_id: str
+    output_id: str
+    forward_paths: list[MasonPathInfo]
+    loops: list[MasonPathInfo]
+    delta_expr: str
+    numerator_expr: str
+    denominator_expr: str
+    parameters: list[ParameterInfo] = []
+
+
 class AnalyzeResponse(BaseModel):
     transfer_function: TransferFunctionInfo
     poles: list[ComplexNumber]
@@ -156,4 +202,5 @@ class AnalyzeResponse(BaseModel):
     root_locus: RootLocusInfo
     parameters: list[ParameterInfo] = []
     formula: str | None = None
+    diagram: MasonInfo | None = None
     warnings: list[str]

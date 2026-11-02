@@ -127,6 +127,48 @@ def test_analyze_rejects_zero_denominator() -> None:
     assert response.status_code == 422
 
 
+def test_analyze_from_diagram() -> None:
+    diagram = {
+        "nodes": [
+            {"id": "r", "kind": "input", "label": "R(s)"},
+            {"id": "sum", "kind": "sum", "label": "E(s)"},
+            {"id": "g", "kind": "block", "formula": "1/(s+1)"},
+            {"id": "t", "kind": "takeoff"},
+            {"id": "h", "kind": "block", "formula": "2"},
+            {"id": "y", "kind": "output", "label": "Y(s)"},
+        ],
+        "edges": [
+            {"source": "r", "target": "sum"},
+            {"source": "sum", "target": "g"},
+            {"source": "g", "target": "t"},
+            {"source": "t", "target": "y"},
+            {"source": "t", "target": "h"},
+            {"source": "h", "target": "sum", "sign": -1},
+        ],
+    }
+    response = client.post("/api/v1/analyze", json={"diagram": diagram})
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["transfer_function"]["formula"] == "(1) / (s + 3)"
+    assert data["stability"]["verdict"] == "stable"
+    assert len(data["diagram"]["forward_paths"]) == 1
+    assert len(data["diagram"]["loops"]) == 1
+
+
+def test_analyze_diagram_without_path_returns_422() -> None:
+    diagram = {
+        "nodes": [
+            {"id": "r", "kind": "input"},
+            {"id": "g", "kind": "block", "formula": "1"},
+            {"id": "y", "kind": "output"},
+        ],
+        "edges": [{"source": "r", "target": "g"}],
+    }
+    response = client.post("/api/v1/analyze", json={"diagram": diagram})
+    assert response.status_code == 422
+
+
 def test_analyze_rejects_unknown_field() -> None:
     response = client.post("/api/v1/analyze", json={"num": [1], "den": [1, 1], "foo": 1})
     assert response.status_code == 422

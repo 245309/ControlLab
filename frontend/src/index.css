@@ -1105,3 +1105,326 @@ body {
     gap: 18px;
   }
 }
+
+/* ---------- 工作模式切换 ---------- */
+.work-switch {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: #eef2f8;
+  border-radius: 10px;
+  margin-left: 28px;
+}
+
+.work-tab {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.work-tab.work-active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  font-weight: 600;
+}
+
+/* ---------- 框图画布 ---------- */
+.diagram-card {
+  padding-bottom: 8px;
+}
+
+.diagram-canvas {
+  height: 520px;
+  border-radius: 12px;
+  border: 1px solid #e6ecf5;
+  background: #fbfcfe;
+  overflow: hidden;
+}
+
+.react-flow__handle {
+  width: 9px;
+  height: 9px;
+  background: #ffffff;
+  border: 2px solid #94a3b8;
+}
+
+.react-flow__handle:hover {
+  border-color: var(--accent, #2563eb);
+}
+
+.diagram-terminal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 17px;
+  border: 1.5px solid #c7d2e3;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.diagram-terminal.input {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.diagram-terminal.output {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.diagram-sum {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.diagram-sum-body {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid #c7d2e3;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #334155;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.diagram-sum-label {
+  position: absolute;
+  top: -16px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.diagram-takeoff {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diagram-takeoff-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #334155;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 4px #cbd5e1;
+}
+
+.diagram-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 104px;
+  max-width: 150px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #c7d2e3;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.diagram-block-name {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.diagram-block-formula {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-selected {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.edge-sign {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #2563eb;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.edge-sign.negative {
+  color: #e11d48;
+  border-color: #fecdd3;
+}
+
+/* ---------- 组件面板 ---------- */
+.palette {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.palette-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid #dbe3ef;
+  background: #fff;
+  font-size: 12px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.palette-btn:hover {
+  border-color: #93c5fd;
+  background: #f5f9ff;
+}
+
+.palette-icon {
+  font-size: 12px;
+  color: #2563eb;
+}
+
+.palette-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ghost-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #dbe3ef;
+  background: #fff;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+}
+
+.ghost-btn:hover {
+  background: #f8fafc;
+}
+
+.ghost-btn.danger {
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+.property-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.text-input.mono {
+  font-family: var(--mono);
+}
+
+/* ---------- Mason 面板 ---------- */
+.mason {
+  margin-top: 12px;
+  border: 1px solid #e6ecf5;
+  border-radius: 10px;
+  background: #fbfcfe;
+}
+
+.mason > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mason-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.mason-body {
+  padding: 2px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mason-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mason-title {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.mason-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11.5px;
+}
+
+.mason-tag {
+  flex: none;
+  min-width: 22px;
+  font-family: var(--mono);
+  color: #2563eb;
+}
+
+.mason-chain {
+  flex: 1;
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mason-gain {
+  font-family: var(--mono);
+  color: #0f172a;
+}
+
+.mason-gain.wide {
+  flex: 1;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.mason-empty {
+  color: var(--muted);
+}

@@ -109,6 +109,22 @@ export interface ParameterInfo {
   value: number;
 }
 
+export interface MasonPathInfo {
+  nodes: string[];
+  gain_expr: string;
+}
+
+export interface MasonInfo {
+  input_id: string;
+  output_id: string;
+  forward_paths: MasonPathInfo[];
+  loops: MasonPathInfo[];
+  delta_expr: string;
+  numerator_expr: string;
+  denominator_expr: string;
+  parameters: ParameterInfo[];
+}
+
 export interface AnalysisResponse {
   transfer_function: TransferFunctionInfo;
   poles: ComplexNumber[];
@@ -119,13 +135,33 @@ export interface AnalysisResponse {
   root_locus: RootLocusInfo;
   parameters: ParameterInfo[];
   formula: string | null;
+  diagram: MasonInfo | null;
   warnings: string[];
+}
+
+export interface DiagramNodePayload {
+  id: string;
+  kind: "input" | "output" | "sum" | "takeoff" | "block";
+  label?: string;
+  formula?: string;
+}
+
+export interface DiagramEdgePayload {
+  source: string;
+  target: string;
+  sign: number;
+}
+
+export interface DiagramPayload {
+  nodes: DiagramNodePayload[];
+  edges: DiagramEdgePayload[];
 }
 
 export interface AnalyzeRequest {
   num?: number[];
   den?: number[];
   formula?: string;
+  diagram?: DiagramPayload;
   params?: Record<string, number>;
   options: {
     settling_band: number;

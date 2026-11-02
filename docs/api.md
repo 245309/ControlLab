@@ -47,6 +47,45 @@
 约束：系数必须为有限实数；`den` 不能全 0；最高次项不能为 0（前导 0 会被自动去掉）。
 请求体不允许出现未知字段（返回 422）。
 
+### 框图输入 `diagram`
+
+与 `num`/`den`/`formula` 三选一。
+
+```json
+{
+  "diagram": {
+    "nodes": [
+      { "id": "r", "kind": "input", "label": "R(s)" },
+      { "id": "sum", "kind": "sum", "label": "E(s)" },
+      { "id": "g", "kind": "block", "formula": "1/(s+1)" },
+      { "id": "t", "kind": "takeoff" },
+      { "id": "h", "kind": "block", "formula": "2" },
+      { "id": "y", "kind": "output", "label": "Y(s)" }
+    ],
+    "edges": [
+      { "source": "r", "target": "sum" },
+      { "source": "sum", "target": "g" },
+      { "source": "g", "target": "t" },
+      { "source": "t", "target": "y" },
+      { "source": "t", "target": "h" },
+      { "source": "h", "target": "sum", "sign": -1 }
+    ]
+  },
+  "params": { "K": 1 }
+}
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `nodes[].kind` | `input` / `output` / `sum`（比较点）/ `takeoff`（引出点）/ `block`（环节） |
+| `nodes[].formula` | 仅 `block` 需要，环节传递函数，支持未知参数 |
+| `nodes[].label` | 仅用于展示 |
+| `edges[].sign` | 连到比较点时的极性，默认 `1`，负反馈写 `-1` |
+| 约束 | 必须恰好有一个 `input` 与一个 `output`；节点 ≤ 30、边 ≤ 80；至少有 1 条从输入到输出的路径 |
+
+求解方式：框图按信号流图处理（环节增益挂在出边上），用 Mason 增益公式
+`T(s) = Σ P_k Δ_k / Δ`，其中 `P_k` 为前向通路增益、`Δ = 1 - ΣL_i + ΣL_iL_j - …`。
+
 ### 响应（节选）
 
 ```json
@@ -169,6 +208,32 @@
 | `note` | 全程稳定 / 开环即不稳定 / 临界增益说明 |
 
 > 非真分式（分子次数 ≥ 分母）时 `branches` 为空，`note` 说明根轨迹不适用。
+
+### 框图字段 `diagram`
+
+只有用 `diagram` 输入时才非空；用 `num`/`den`/`formula` 输入时为 `null`。
+
+```json
+{
+  "input_id": "r",
+  "output_id": "y",
+  "forward_paths": [{ "nodes": ["r", "sum", "g", "t", "y"], "gain_expr": "1/(s + 1)" }],
+  "loops": [{ "nodes": ["g", "t", "h", "sum"], "gain_expr": "-2/(s + 1)" }],
+  "delta_expr": "(s + 3)/(s + 1)",
+  "numerator_expr": "1/(s + 1)",
+  "denominator_expr": "(s + 3)/(s + 1)",
+  "parameters": [{ "name": "K", "value": 1.0 }]
+}
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `forward_paths[].nodes` | 该前向通路经过的节点 id（比较点、引出点都在路径上） |
+| `forward_paths[].gain_expr` | 通路增益 P_k |
+| `loops[].nodes` | 回路节点序列，首个节点即闭合点 |
+| `delta_expr` | 特征式 Δ（已代入参数） |
+| `numerator_expr` / `denominator_expr` | ΣP_kΔ_k 与 Δ，即闭环 T(s) 的分子/分母 |
+| `parameters` | 框图中出现的未知参数及其当前值 |
 
 ### 错误
 

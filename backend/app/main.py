@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api.routes import router as api_router
 
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
@@ -19,7 +19,7 @@ FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 app = FastAPI(
     title="ControlLab API",
     version=APP_VERSION,
-    description="线性连续系统的传递函数、稳定性、时域/频域与根轨迹分析接口",
+    description="线性连续系统的传递函数、稳定性、时域、频域与根轨迹分析接口",
 )
 
 app.add_middleware(

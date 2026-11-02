@@ -124,13 +124,32 @@ sign_changes = build_routh_table(den)   # Routh 变号（符号）
 前端只保存「公式文本 + 参数表」，每次拖动滑块都重新提交 `{formula, params}`，由后端编译后再走同一套分析流水线；
 响应里的 `parameters` 用于生成滑块（只补缺失项，避免请求循环）。
 
+### 9. 框图求解（v0.4，Mason 增益公式）
+
+框图本质上就是信号流图，因此不做「等效变换化简」，而是直接套 Mason 公式：
+
+1. **节点语义**：`input` / `output` / `sum`（比较点）/ `takeoff`（引出点）/ `block`（环节）。
+2. **增益归属**：环节的传递函数挂在它的**出边**上（入边增益 1），这样一个节点只有一条出边时可以直接连乘，多出边时（引出点）各分支自然共享同一信号。
+3. **比较点符号**：比较点每条入边带 `sign = ±1`，因此「回路增益」天然带上负号，不需要额外判断正负反馈。
+4. **前向通路**：从 input 出发 DFS，不重复经过节点，到达 output 即记录并停止（避免穿过输出再绕回）。
+5. **回路**：对每个起点做 DFS，回到起点即成立；去重规则是「起点取回路中 id 最小的节点」，并在扩展时只接受 `target > start`，保证每个回路只被枚举一次。
+6. **特征式**：`Δ = 1 - ΣL_i + ΣL_iL_j - ΣL_iL_jL_k + …`，其中「互不接触」用节点集合两两不交判定，组合用 `itertools.combinations` 枚举（回路数 > 12 时跳过高阶项）。
+7. **残式**：`Δ_k` = 删去与前向通路 P_k 接触的所有回路后，剩余回路的 Δ。
+
+得到的 ΣP_kΔ_k / Δ 再走原有的 `compile_gain` → 多项式 → 与 `num`/`den` 输入完全相同的分析链路。
+规模上限（30 节点 / 80 边 / 60 通路 / 40 回路）用于防止指数爆炸；无输入、无输出、无通路都返回 422 并附中文原因。
+
 ## 前端结构
 
 ```
-App.tsx                     布局 + 输入状态 + URL 参数化（?num=&den=&formula=）
+App.tsx                     布局 + 输入状态 + 工作模式（?mode=diagram）+ URL 参数化（?num=&den=&formula=）
 ├─ CoefficientInput         系数输入（系数模式）
-├─ ParameterSliders         未知参数滑块 + 精确数值框（公式模式）
+├─ ParameterSliders         未知参数滑块 + 精确数值框（公式模式 / 框图模式）
 ├─ FormulaView              G(s) 分式排版
+├─ diagram/DiagramCanvas    React Flow 画布（Provider + Inner，因为 useReactFlow 必须在 Provider 内）
+│  ├─ diagram/DiagramNodeView  输入/输出胶囊、比较点 Σ、引出点、环节矩形
+│  ├─ diagram/SignedEdge       ±1 徽标连线，点击切换极性
+│  └─ diagram/MasonPanel       前向通路 / 回路 / Δ 展开
 ├─ StabilityPanel           特征方程 + 结论卡 + 三重依据 + Routh 表 + warnings
 ├─ MetricsGrid              6 个指标卡
 ├─ StepResponseChart        曲线 + 稳态线 + 误差带 + 峰值标注
