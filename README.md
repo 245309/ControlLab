@@ -96,11 +96,10 @@ backend\.venv\Scripts\python.exe desktop\launcher.py
 
 ```powershell
 # 终端 1：后端
-cd E:\PY_Projects\Project4\ControlLab\backend
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
-
+ControlLab\backend
 # 终端 2：前端（Vite 已把 /api 代理到 8000）
-cd E:\PY_Projects\Project4\ControlLab\frontend
+ControlLab\frontend
 npm run dev
 ```
 
