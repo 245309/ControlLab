@@ -104,11 +104,12 @@ backend\.venv\Scripts\python.exe desktop\launcher.py
 ### 方式二：前后端分开跑（推荐给开发）
 
 ```powershell
-# 终端 1：后端
+# 终端 1：后端（先进入 ControlLab\backend）
+cd ControlLab\backend
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
-ControlLab\backend
-# 终端 2：前端（Vite 已把 /api 代理到 8000）
-ControlLab\frontend
+
+# 终端 2：前端（先进入 ControlLab\frontend）
+cd ControlLab\frontend
 npm run dev
 ```
 
@@ -117,7 +118,7 @@ npm run dev
 ### 命令行自检
 
 ```powershell
-cd E:\PY_Projects\Project4\ControlLab\backend
+cd ControlLab\backend
 .venv\Scripts\python.exe -m pytest
 ```
 
