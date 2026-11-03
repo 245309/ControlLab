@@ -123,3 +123,29 @@ npm run build        # tsc --noEmit + vite build -> frontend/dist
 > 必须在**非沙箱**进程里执行；esbuild 还会在系统临时目录写中间文件，
 > 若遇到 `Access is denied`，把 `TEMP`/`TMP` 指到工作区内（如 `ControlLab\.tmp\build-tmp`）再构建即可。
 > 普通用户直接执行不受影响。
+
+## 8. 推送到 GitHub
+
+仓库：<https://github.com/245309/ControlLab>（public，默认分支 `main`）
+
+本机出网走系统代理 `127.0.0.1:7897`（`HKCU\...\Internet Settings\ProxyServer`）。
+git 默认的 schannel 后端在这个环境里仍是 `SEC_E_NO_CREDENTIALS`，所以统一用 openssl 后端 + 显式代理：
+
+```powershell
+cd E:\PY_Projects\Project4\ControlLab
+$env:HTTPS_PROXY='http://127.0.0.1:7897'; $env:HTTP_PROXY='http://127.0.0.1:7897'
+git -c http.sslBackend=openssl -c http.proxy=http://127.0.0.1:7897 push origin main
+```
+
+- 凭据已存在 Windows 凭据管理器（`git credential fill` 直接取到 40 位 token），不需要每次输入。
+- 代理关掉时直连推送：`git push origin main`（不再带 `-c http.proxy`）。
+- 本地提交身份：`user.name = zhang`、`user.email = zhangyaoren2022@163.com`。
+
+### 代理环境下的两个坑
+
+1. **Python `urllib` 走这个代理会报 `CERTIFICATE_VERIFY_FAILED: unable to get issuer certificate`**
+   —— 代理做了 TLS 中间人，Python 自带的 CA 包不认识它。
+   调 GitHub API 时改用 `Invoke-RestMethod -Proxy http://127.0.0.1:7897`（走 Windows 证书库）或 `curl.exe --proxy`。
+2. **`git credential fill` 在精简环境下会报「该平台上不支持操作」**
+   —— 必须继承完整环境变量（尤其是 PATH 与 `GCM_*`），不要手动拼一个最小 env。
+

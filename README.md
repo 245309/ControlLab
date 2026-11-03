@@ -4,6 +4,8 @@
 
 目标是替代 MATLAB 在本课程中的「看一眼系统行为」这一场景：不需要写代码、不需要 license、打开就能用。
 
+仓库：<https://github.com/245309/ControlLab>
+
 ![主界面](docs/images/stable.png)
 ![框图分析](docs/images/diagram.png)
 
