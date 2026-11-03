@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api.routes import router as api_router
 
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.5.1"
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"

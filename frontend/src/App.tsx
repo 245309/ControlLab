@@ -504,7 +504,7 @@ export default function App() {
         </div>
 
         <div className="topbar-right">
-          <span className="version-chip">v0.5.0</span>
+          <span className="version-chip">v0.5.1</span>
           <span className={`status-chip ${loading ? "status-busy" : error ? "status-bad" : "status-ok"}`}>
             <span className="status-dot" />
             {loading ? "计算中" : error ? "解析异常" : "实时分析"}
@@ -767,7 +767,7 @@ export default function App() {
       </div>
 
       <footer className="statusbar">
-        <span>ControlLab v0.5.0 · 框图 Mason 求解</span>
+        <span>ControlLab v0.5.1 · 框图 Mason 求解</span>
         <span>拖动节点连线即可搭框图</span>
       </footer>
     </div>

@@ -155,6 +155,15 @@ sign_changes = build_routh_table(den)   # Routh 变号（符号）
 
 ## 前端结构
 
+### 布局与滚动（v0.5.1）
+
+`html/body/#root` 撑满视口；`.app-shell` 是 `height:100vh; overflow:hidden` 的纵向 flex，顶栏与状态栏 `flex:none` 固定，中间 `.workspace` 为 `grid`，带 `min-height:0` 与 `align-items:stretch`。
+
+- 左栏 `.sidebar` 与右栏 `.content` 各自 `overflow-y:auto`，滚轮只作用于鼠标所在的一栏；`overscroll-behavior:contain` 阻止滚动链传到整页（否则滚到底会「带着整页一起动」）。
+- `scrollbar-gutter:stable` + 8px 细滚动条，避免滚动条出现/消失时内容左右跳动。
+- `@media (max-width:900px)` 把 `.app-shell` 还原成 `height:auto`、两栏 `overflow:visible`，回退成单栏整页滚动。
+- 框图模式里 React Flow 自己处理滚轮（缩放画布），ECharts 未开 dataZoom 时滚轮会冒泡给右栏，两者都不会带动整页。
+
 ```
 App.tsx                     布局 + 输入状态 + 工作模式（?mode=diagram）+ URL 参数化（?num=&den=&formula=）
 ├─ CoefficientInput         系数输入（系数模式）
@@ -162,7 +171,7 @@ App.tsx                     布局 + 输入状态 + 工作模式（?mode=diagram
 ├─ FormulaView              G(s) 分式排版
 ├─ diagram/DiagramCanvas    React Flow 画布（Provider + Inner，因为 useReactFlow 必须在 Provider 内）
 │  ├─ diagram/DiagramNodeView  输入/输出胶囊、比较点 ⊗（圆圈内一个叉）、引出点、环节矩形
-│  ├─ diagram/SignedEdge       ±1 徽标连线，点击切换极性
+│  ├─ diagram/OrthogonalEdge   带箭头的直角折线（曼哈顿路由）+ ±1 徽标
 │  └─ diagram/MasonPanel       前向通路 / 回路 / Δ 展开
 ├─ StabilityPanel           特征方程 + 结论卡 + 三重依据 + Routh 表 + warnings
 ├─ MetricsGrid              6 个指标卡
