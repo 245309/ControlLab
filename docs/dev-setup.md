@@ -149,3 +149,35 @@ git -c http.sslBackend=openssl -c http.proxy=http://127.0.0.1:7897 push origin m
 2. **`git credential fill` 在精简环境下会报「该平台上不支持操作」**
    —— 必须继承完整环境变量（尤其是 PATH 与 `GCM_*`），不要手动拼一个最小 env。
 
+## 9. 打包成 exe（PyInstaller）
+
+```powershell
+cd E:\PY_Projects\Project4\ControlLab\frontend; npm run build; cd ..
+backend\.venv\Scripts\python.exe desktop\build.py --zip
+```
+
+产物：`dist\ControlLab\ControlLab.exe` + `_internal\`，以及 `dist\ControlLab-<version>-win64.zip`（约 55 MB / 解压后 140 MB）。
+
+### 为什么是 onedir + console
+
+| 选择 | 原因 |
+| --- | --- |
+| `--onedir` | `--onefile` 启动时要解压到 `%TEMP%`，本机报 `[PYI-xxxx:ERROR] Could not create temporary directory!`（`%TEMP%` 的 ACL 偏紧），onedir 免解压、启动更快 |
+| `--console` | `--windowed` 在本机表现为**静默退出**（连日志都不留，原因未定位）；console 版稳定，用 `_hide_console()`（`GetConsoleWindow` + `ShowWindow(hwnd, 0)`）在启动后把黑框藏掉，代价是闪一下 |
+
+`desktop/app_exe.py` 里的几个防御，都是这次踩坑加的：
+
+- `_data_dir()`：依次尝试 `%LOCALAPPDATA%` → `%APPDATA%` → `%TEMP%` → exe 同级 `ControlLab-data`。本机 `%LOCALAPPDATA%\ControlLab` 建不出来（`PermissionError [WinError 5]`），旧代码在这里抛异常、连带日志一起挂，表现为「双击没反应」。
+- `_log()` 先写文件再打印，且把 `_data_dir()` 包在 try/except 里——保证任何情况下都有日志可查。
+- `_attach_streams()`：`--windowed` 下 `sys.stdout` 是 `None`，打印会抛 `AttributeError`。
+
+### 测试 exe 的正确姿势
+
+**不要**在同步命令里 `Start-Process` 拉 GUI exe：工具调用会等子进程退出，表现为「命令卡 5–10 分钟」。改成
+
+```
+run_in_background: true  →  启动 exe
+另起一次调用             →  探测 /health 与 /api/v1/analyze
+Stop-Process             →  收尾
+```
+

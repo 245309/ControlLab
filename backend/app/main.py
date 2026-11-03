@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -13,8 +14,16 @@ from .api.routes import router as api_router
 
 APP_VERSION = "0.5.1"
 
+
+def _frontend_dist() -> Path:
+    """源码运行时用 frontend/dist；PyInstaller 打包后从解包目录的 frontend_dist 取。"""
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "frontend_dist"
+    return Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
+FRONTEND_DIST = _frontend_dist()
 
 app = FastAPI(
     title="ControlLab API",

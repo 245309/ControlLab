@@ -78,7 +78,16 @@ wn^2/(s^2+2*zeta*wn*s+wn^2)
 
 ## 快速开始
 
-### 方式一：桌面窗口（推荐给使用者）
+### 方式零：下载 exe（给没有任何开发环境的同学）
+
+到 [Releases](https://github.com/245309/ControlLab/releases) 下载 `ControlLab-0.5.1-win64.zip`，解压后双击 `ControlLab.exe`：
+
+- 不需要装 Python / Node，也不需要管理员权限
+- 首次启动会自动挑一个空闲端口，用 Edge 应用窗口打开界面；关掉窗口程序就退出
+- 需要本机有 Microsoft Edge（Windows 10/11 自带）
+- 启动瞬间会闪一下命令行黑框，随后自动隐藏
+
+### 方式一：从源码启动（推荐给开发）
 
 ```powershell
 cd E:\PY_Projects\Project4\ControlLab
@@ -112,6 +121,17 @@ cd E:\PY_Projects\Project4\ControlLab\backend
 .venv\Scripts\python.exe -m pytest
 ```
 
+### 打包成 exe
+
+```powershell
+cd E:\PY_Projects\Project4\ControlLab\frontend; npm run build; cd ..
+backend\.venv\Scripts\python.exe desktop\build.py --zip
+```
+
+产物是 `dist\ControlLab\ControlLab.exe`（连同 `_internal\` 目录一起分发）和 `dist\ControlLab-<version>-win64.zip`。
+
+用 **onedir** 而不是 `--onefile`：onefile 每次启动都要解压到 `%TEMP%`，遇到临时目录权限受限的机器会直接起不来；onedir 免解压、启动也更快。
+
 ## 项目结构
 
 ```
@@ -140,7 +160,9 @@ ControlLab/
 │     ├─ hooks/useAnalysis.ts   # 防抖请求 + 结果缓存 + 取消
 │     ├─ api/client.ts          # fetch 封装
 │     └─ types/                 # analysis.ts（与后端一致）、diagram.ts
-├─ desktop/launcher.py          # 端口分配 + 后端托管 + Edge 窗口
+├─ desktop/launcher.py          # 端口分配 + 后端托管 + Edge 窗口（源码模式）
+├─ desktop/app_exe.py           # 打包版入口：进程内起 uvicorn + Edge 应用窗口
+├─ desktop/build.py             # PyInstaller 打包脚本（--zip 直接出压缩包）
 └─ docs/                        # 架构、API、开发环境记录
 ```
 
