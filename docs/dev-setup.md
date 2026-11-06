@@ -120,9 +120,9 @@ npm run build        # tsc --noEmit + vite build -> frontend/dist
 - 启动器会为 Edge 使用独立配置目录 `ControlLab\.tmp\edge-profile`，不干扰日常浏览器的会话与插件。
 
 > 本机构建注意：`npm install` / `npm run build` 需要派生子进程（esbuild、tsc），
-> 必须在**非沙箱**进程里执行；esbuild 还会在系统临时目录写中间文件，
-> 若遇到 `Access is denied`，把 `TEMP`/`TMP` 指到工作区内（如 `ControlLab\.tmp\build-tmp`）再构建即可。
-> 普通用户直接执行不受影响。
+> 必须在**非沙箱**进程里执行。esbuild 的临时目录已在 `frontend/vite.config.ts` 里
+> 自动指到 `ControlLab\.tmp\vite-tmp`，正常 `npm run build` 即可，无需手工设环境变量；
+> 原理见第 10 节。
 
 ## 8. 推送到 GitHub
 
@@ -181,3 +181,33 @@ run_in_background: true  →  启动 exe
 Stop-Process             →  收尾
 ```
 
+
+## 10. 构建时的 esbuild 临时文件问题（本机特有）
+
+现象：`npm run build` 报 `[vite:esbuild-transpile] remove C:\Users\zhang\AppData\Local\Temp\esbuild-xxxx: Access is denied.`
+
+复现数据（同一个 node、同一个 esbuild、同一段代码，只换临时目录）：
+
+| 临时目录 | 32 KB 负载 ×20 并发 | 1.28 MB 负载 ×20 并发 |
+| --- | --- | --- |
+| `%TEMP%`（系统临时目录） | 20/20 成功 | **20/20 失败**，留下 20 个 `esbuild-*` |
+| 项目内 `.tmp\npm-tmp` | 20/20 成功 | 20/20 成功，0 残留 |
+
+判定依据（做过对照组）：
+
+- 与「哪个 exe」无关：把 `esbuild.exe` 复制到项目内运行，往 `%TEMP%` 删文件照样被拒。
+- 与「往哪个目录删」有关：`%TEMP%`、`C:\Temp-cl-test`、`E:\Temp-cl-test` 全失败，项目目录内成功。
+- 与权限无关：失败文件的 ACL 正常（`Owner: TIANXUAN\zhang`，`Authenticated Users:(I)(M)`），
+  同目录下 `cmd del`、`node fs.unlinkSync`、PowerShell `[IO.File]::Delete` 删同一文件都成功，
+  只有 `esbuild.exe` 这一个进程的删除被拒。
+- 与 DSH 沙箱无关：用 `schtasks` 以普通用户令牌在沙箱外跑同一条 build，报错一致。
+
+结论：本机安全软件（火绒 `HipsDaemon`，即便托盘退出、服务仍 Running）按「进程 + 目标目录」
+拦截 `esbuild.exe` 的删除操作；给 exe 或单个目录加信任区都验证无效，只有项目目录放行。
+
+处理：`frontend/vite.config.ts` 在配置加载时把 `process.env.TEMP/TMP/TMPDIR` 指到
+`ControlLab\.tmp\vite-tmp`（自动创建），这样 esbuild 读写的临时文件落在信任目录内。
+`npm run build` 保持标准写法 `tsc --noEmit && vite build`，无需任何包装脚本或手工环境变量；
+代价是 `vite.config.ts` 需要 `@types/node`（已在 devDependencies）。
+
+验证：标准命令在默认 `%TEMP%` 下 `✓ built in 4.6s`，`.tmp\vite-tmp` 跑完后为空（无残留）。

@@ -18,3 +18,4 @@ dist/
 # packaging
 build/
 *.spec
+launcher.log
