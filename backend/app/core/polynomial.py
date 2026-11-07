@@ -28,6 +28,17 @@ def trim(coeffs: list[float]) -> list[float]:
     return out
 
 
+def poly_add(left: list[float], right: list[float]) -> list[float]:
+    """按降幂系数相加（自动右对齐、长度取两者最大），返回去前导 0 的结果。"""
+    length = max(len(left), len(right))
+    total = [0.0] * length
+    for index, value in enumerate(reversed(left)):
+        total[length - 1 - index] += float(value)
+    for index, value in enumerate(reversed(right)):
+        total[length - 1 - index] += float(value)
+    return trim(total)
+
+
 def to_fraction(value: float) -> Fraction:
     """按十进制字面量转成精确分数：0.1 -> 1/10，避免浮点误差造成假变号。"""
     return Fraction(str(float(value)))

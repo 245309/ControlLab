@@ -113,13 +113,20 @@ export function NyquistChart({ frequency }: NyquistChartProps) {
     <section className="card chart-card">
       <div className="card-head">
         <h2 className="card-title">Nyquist 图</h2>
+        <span className={`scope-chip ${frequency.scope === "open" ? "scope-open" : "scope-closed"}`}>
+          {frequency.scope === "open" ? "开环 L" : "闭环 T"}
+        </span>
         <span className="card-tag">ω: 0⁺ → ∞</span>
       </div>
       <div ref={ref} className="chart chart-square" />
       <div className="card-foot">
         <span>实线为 ω&gt;0，虚线为镜像</span>
         <span className="legend-critical" />
-        <span>(-1, j0) 是稳定判据的关键点</span>
+        <span>
+          {frequency.scope === "open"
+            ? "(-1, j0) 是稳定判据的关键点"
+            : "闭环曲线的 (-1, j0) 不作为开环稳定判据使用"}
+        </span>
       </div>
     </section>
   );

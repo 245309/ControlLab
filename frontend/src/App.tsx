@@ -20,7 +20,7 @@ import type { AnalyzeRequest } from "./types/analysis";
 import { NODE_LABELS, type DiagramNodeData, type DiagramNodeKind, type DiagramPayload } from "./types/diagram";
 
 type InputMode = "formula" | "coeff";
-type WorkMode = "expression" | "diagram";
+type WorkMode = "expression" | "unity" | "diagram";
 
 interface Preset {
   name: string;
@@ -43,6 +43,11 @@ const PRESETS: Preset[] = [
     name: "三阶带零点",
     formula: "(s+1)/(s^3+6*s^2+11*s+3)",
     note: "(s+1)(s+1.6)(s+1.9)",
+  },
+  {
+    name: "开环 Ⅰ 型三阶",
+    formula: "2/(s*(s+1)*(s+2))",
+    note: "单位负反馈：γ≈32.6°，Kg≈9.5 dB",
   },
 ];
 
@@ -154,9 +159,11 @@ export default function App() {
     if (typeof window === "undefined") {
       return "expression";
     }
-    return new URLSearchParams(window.location.search).get("mode") === "diagram"
-      ? "diagram"
-      : "expression";
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (mode === "diagram" || mode === "unity") {
+      return mode;
+    }
+    return "expression";
   });
   const [mode, setMode] = useState<InputMode>(initial.mode);
   const [formulaText, setFormulaText] = useState(initial.formula);
@@ -205,18 +212,20 @@ export default function App() {
       return { diagram: diagramPayload, params, options };
     }
 
+    const analysisMode = workMode === "unity" ? "unity" : "closed";
+
     if (mode === "formula") {
       const text = formulaText.trim();
       if (!text) {
         return null;
       }
-      return { formula: text, params, options };
+      return { formula: text, params, options, analysis_mode: analysisMode };
     }
 
     if (num.error || den.error || num.values.length === 0 || den.values.length === 0) {
       return null;
     }
-    return { num: num.values, den: den.values, options };
+    return { num: num.values, den: den.values, options, analysis_mode: analysisMode };
   }, [workMode, diagramPayload, mode, formulaText, params, num, den, options]);
 
   const { data, error, loading } = useAnalysis(request);
@@ -335,13 +344,16 @@ export default function App() {
         <BlockHead
           index={1}
           title="传递函数"
-          meta={`${properTag}${updatedAt ? ` · 已更新 ${updatedAt}` : ""}`}
+          meta={`${data.analysis_mode === "unity" ? "开环 L(s) → 闭环 T(s) · " : ""}${properTag}${
+            updatedAt ? ` · 已更新 ${updatedAt}` : ""
+          }`}
         />
         <div className="card">
           <FormulaView
             numExpr={data.transfer_function.num_expr}
             denExpr={data.transfer_function.den_expr}
             quotientExpr={data.transfer_function.quotient_expr}
+            openLoop={data.open_loop}
           />
           <div className="formula-meta">
             <span>分子 {data.transfer_function.num_degree} 次</span>
@@ -382,7 +394,7 @@ export default function App() {
       <section className="analysis-block">
         <BlockHead
           index={4}
-          title="频域分析"
+          title={data.frequency.scope === "open" ? "频域分析（开环 L）" : "频域分析（闭环）"}
           meta={`ω ${formatNumber(data.frequency.omega_min, 3)} – ${formatNumber(data.frequency.omega_max, 3)} rad/s`}
         />
         <div className="chart-grid">
@@ -392,7 +404,11 @@ export default function App() {
       </section>
 
       <section className="analysis-block">
-        <BlockHead index={5} title="增益 K 变化时的根轨迹" meta="D(s)+K·N(s)=0" />
+        <BlockHead
+          index={5}
+          title="增益 K 变化时的根轨迹"
+          meta={data.analysis_mode === "unity" ? "开环 L(s)：D(s)+K·N(s)=0" : "D(s)+K·N(s)=0（把输入当开环）"}
+        />
         <div className="chart-grid">
           <RootLocusChart locus={data.root_locus} />
           <PoleZeroChart poles={data.poles} zeros={data.zeros} />
@@ -493,7 +509,13 @@ export default function App() {
             className={`work-tab ${workMode === "expression" ? "work-active" : ""}`}
             onClick={() => setWorkMode("expression")}
           >
-            表达式分析
+            闭环传递函数
+          </button>
+          <button
+            className={`work-tab ${workMode === "unity" ? "work-active" : ""}`}
+            onClick={() => setWorkMode("unity")}
+          >
+            单位负反馈
           </button>
           <button
             className={`work-tab ${workMode === "diagram" ? "work-active" : ""}`}
@@ -504,7 +526,7 @@ export default function App() {
         </div>
 
         <div className="topbar-right">
-          <span className="version-chip">v0.5.1</span>
+          <span className="version-chip">v0.6.0</span>
           <span className={`status-chip ${loading ? "status-busy" : error ? "status-bad" : "status-ok"}`}>
             <span className="status-dot" />
             {loading ? "计算中" : error ? "解析异常" : "实时分析"}
@@ -514,11 +536,11 @@ export default function App() {
 
       <div className="workspace">
         <aside className="sidebar">
-          {workMode === "expression" ? (
+          {workMode !== "diagram" ? (
             <>
               <section className="card">
                 <div className="card-head">
-                  <h2 className="card-title">系统输入</h2>
+                  <h2 className="card-title">{workMode === "unity" ? "开环传递函数 L(s)" : "系统输入"}</h2>
                   <div className="mode-switch">
                     <button
                       className={`mode-tab ${mode === "formula" ? "mode-active" : ""}`}
@@ -546,7 +568,9 @@ export default function App() {
                       placeholder="例如 K/(s*(s+1)) 或 10/(s^2+2*s+10)"
                     />
                     <p className="formula-help">
-                      s、数字、+ − × ÷ ^ 与括号；其余标识符当作未知参数，自动生成滑块。
+                      {workMode === "unity"
+                        ? "输入开环 L(s)：按单位负反馈 T(s)=L/(1+L) 求闭环；Bode/Nyquist/裕度与根轨迹针对 L(s)。"
+                        : "s、数字、+ − × ÷ ^ 与括号；其余标识符当作未知参数，自动生成滑块。"}
                     </p>
                     {error && <p className="field-error">{error}</p>}
                     <ParameterSliders parameters={data?.parameters ?? []} values={params} onChange={updateParam} />
@@ -554,7 +578,7 @@ export default function App() {
                 ) : (
                   <>
                     <CoefficientInput
-                      label="分子 N(s)"
+                      label={workMode === "unity" ? "开环分子 N(s)" : "分子 N(s)"}
                       hint="空格或逗号分隔"
                       value={numText}
                       onChange={setNumText}
@@ -562,8 +586,8 @@ export default function App() {
                       terms={toTerms(num.values)}
                     />
                     <CoefficientInput
-                      label="分母 D(s)"
-                      hint="即特征方程系数"
+                      label={workMode === "unity" ? "开环分母 D(s)" : "分母 D(s)"}
+                      hint={workMode === "unity" ? "闭环为 D(s)+N(s)" : "即特征方程系数"}
                       value={denText}
                       onChange={setDenText}
                       error={den.error}
@@ -767,8 +791,8 @@ export default function App() {
       </div>
 
       <footer className="statusbar">
-        <span>ControlLab v0.5.1 · 框图 Mason 求解</span>
-        <span>拖动节点连线即可搭框图</span>
+        <span>ControlLab v0.6.0 · 闭环 / 单位负反馈 / 框图 Mason 求解</span>
+        <span>单位负反馈：输入开环 L(s)，闭环与开环指标分开给出</span>
       </footer>
     </div>
   );

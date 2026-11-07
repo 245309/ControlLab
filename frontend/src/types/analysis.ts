@@ -90,6 +90,7 @@ export interface FrequencyInfo {
   phase_crossover: number | null;
   gain_margin_db: number | null;
   phase_margin_deg: number | null;
+  scope: "closed" | "open";
   note: string | null;
 }
 
@@ -127,6 +128,8 @@ export interface MasonInfo {
 
 export interface AnalysisResponse {
   transfer_function: TransferFunctionInfo;
+  analysis_mode: "closed" | "unity";
+  open_loop: TransferFunctionInfo | null;
   poles: ComplexNumber[];
   zeros: ComplexNumber[];
   stability: StabilityInfo;
@@ -162,6 +165,7 @@ export interface AnalyzeRequest {
   den?: number[];
   formula?: string;
   diagram?: DiagramPayload;
+  analysis_mode?: "closed" | "unity";
   params?: Record<string, number>;
   options: {
     settling_band: number;

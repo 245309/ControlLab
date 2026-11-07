@@ -150,17 +150,20 @@ export function BodeChart({ frequency }: BodeChartProps) {
     <section className="card chart-card">
       <div className="card-head">
         <h2 className="card-title">Bode 图</h2>
+        <span className={`scope-chip ${frequency.scope === "open" ? "scope-open" : "scope-closed"}`}>
+          {frequency.scope === "open" ? "开环 L" : "闭环 T"}
+        </span>
         <span className="card-tag">幅频 / 相频</span>
       </div>
       <div ref={ref} className="chart chart-bode" />
       <div className="card-foot">
         <span>ω 范围 {formatNumber(frequency.omega_min, 3)} – {formatNumber(frequency.omega_max, 3)} rad/s</span>
         <span>
-          相角裕度 γ ={" "}
+          {frequency.scope === "open" ? "相角裕度 γ = " : "γ（按开环定义算在闭环曲线上）= "}
           {frequency.phase_margin_deg === null ? "—" : `${formatNumber(frequency.phase_margin_deg, 2)}°`}
         </span>
         <span>
-          幅值裕度 Kg ={" "}
+          {frequency.scope === "open" ? "幅值裕度 Kg = " : "Kg（同上，仅供参考）= "}
           {frequency.gain_margin_db === null ? "—" : `${formatNumber(frequency.gain_margin_db, 2)} dB`}
         </span>
         {frequency.note && <span className="foot-note">{frequency.note}</span>}

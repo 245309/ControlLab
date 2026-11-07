@@ -42,6 +42,19 @@
 | `options.omega_max` | `number \| null` | 否 | 终止频率，必须大于 `omega_min` |
 | `options.k_min` | `number \| null` | 否 | 根轨迹最小增益；`null` 自动（约为最小特征尺度 /1000） |
 | `options.k_max` | `number \| null` | 否 | 最大增益；`null` 自动（扫到最远闭环极点约 8 倍特征尺度） |
+| `analysis_mode` | `"closed" \| "unity"` | 否 | 默认 `closed`：输入即闭环传递函数。`unity`：输入按**开环 L(s)** 处理，闭环取 T=L/(1+L)=N/(D+N) |
+
+`analysis_mode="unity"` 时的语义：
+
+| 分块 | 用哪个传递函数 |
+| --- | --- |
+| `transfer_function` | 闭环 T(s) |
+| `open_loop` | 开环 L(s)（与输入的 `num`/`den`/`formula` 一致） |
+| `stability` / `time_response` / `poles` / `zeros` | 闭环 T(s) |
+| `frequency`（Bode、Nyquist、γ、Kg） | **开环 L(s)**，且 `frequency.scope = "open"` |
+| `root_locus` | **开环 L(s)**（`D(s)+K·N(s)=0`） |
+
+`unity` 与 `diagram` 互斥，同时给出返回 422。
 
 公式语法：变量 `s`、数字、`+ - * / ^`、括号，支持隐式乘法（`2s`、`3(s+1)`）；其余标识符视为未知参数。
 约束：系数必须为有限实数；`den` 不能全 0；最高次项不能为 0（前导 0 会被自动去掉）。
@@ -90,6 +103,7 @@
 
 ```json
 {
+  "analysis_mode": "closed",
   "transfer_function": {
     "num": [10], "den": [1, 2, 10],
     "num_degree": 0, "den_degree": 2,
@@ -98,6 +112,7 @@
     "formula": "(10) / (s^2 + 2s + 10)",
     "quotient_expr": null
   },
+  "open_loop": null,
   "poles": [{ "re": -1.0, "im": -3.0 }, { "re": -1.0, "im": 3.0 }],
   "zeros": [],
   "stability": {
@@ -157,11 +172,14 @@
 | `warnings` | 输入被自动修正、非真分式、指标不适用等提示 |
 | `parameters` | 公式里解析出的未知参数 `[{ "name": "wn", "value": 3.162 }]`，系数模式为空数组 |
 | `formula` | 回显实际使用的公式文本（系数模式为 `null`） |
+| `analysis_mode` | 回显请求的模式：`closed` / `unity` |
+| `open_loop` | 仅 `unity` 模式非 `null`，内容与 `transfer_function` 同结构，即开环 L(s) |
 
 ### 频域字段 `frequency`
 
 ```json
 {
+  "scope": "closed",
   "bode": { "omega": [0.032, "..."], "magnitude_db": [20.0, "..."], "phase_deg": [0.0, "..."] },
   "nyquist": { "re": [1.0, "..."], "im": [0.0, "..."], "omega": [0.032, "..."] },
   "omega_min": 0.031623, "omega_max": 316.228,
@@ -174,6 +192,8 @@
 ```
 
 | 字段 | 说明 |
+| --- | --- |
+| `scope` | `open`：曲线与裕度都算在开环 L(s) 上（`unity` 模式）；`closed`：曲线是闭环 T(s)，γ/Kg 只是「按开环定义套在闭环曲线上」的参考值 |
 | --- | --- |
 | `bode.omega` | 对数等距的频率网格（400 点） |
 | `bode.magnitude_db` | `20·log10|H(jω)|`，dB |

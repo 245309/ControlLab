@@ -1538,6 +1538,42 @@ body {
   stroke: #2563eb;
 }
 
+/* 单位负反馈模式：同时展示开环 L(s) 与闭环 T(s) */
+.formula-open {
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed var(--line, #e2e8f0);
+}
+
+.formula-arrow {
+  font-size: 12px;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+
+/* 频域卡片上的「开环 / 闭环」标识 */
+.scope-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid transparent;
+}
+
+.scope-open {
+  color: #0f766e;
+  background: #ccfbf1;
+  border-color: #99f6e4;
+}
+
+.scope-closed {
+  color: #9a3412;
+  background: #ffedd5;
+  border-color: #fed7aa;
+}
+
 /* 比较点圆圈加深一点，缩小后仍能看出是 ⊗ */
 .diagram-sum-body {
   border: 1.6px solid #94a3b8;

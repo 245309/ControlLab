@@ -11,7 +11,7 @@ from ..core.frequency_response import compute_frequency
 from ..core.mason import DiagramEdge as MasonEdge
 from ..core.mason import DiagramNode as MasonNode
 from ..core.mason import analyze_diagram
-from ..core.polynomial import is_zero, strip_leading_zeros
+from ..core.polynomial import is_zero, poly_add, strip_leading_zeros
 from ..core.root_locus import LocusData, compute_root_locus
 from ..core.stability import build_routh_table, check_necessary_condition, classify_by_roots
 from ..core.time_response import (
@@ -153,9 +153,22 @@ def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
     num, den = _validate(num, den)
     warnings: list[str] = []
 
+    # 单位负反馈模式：输入是开环 L(s)，闭环 T(s) = L/(1+L) = N/(D+N)。
+    # 频域与根轨迹仍然针对开环 L，稳定性/时域针对闭环 T。
+    unity_mode = payload.analysis_mode == "unity"
+    open_num, open_den = list(num), list(den)
+    if unity_mode:
+        closed_den = poly_add(den, num)
+        num, den = open_num, closed_den
+        warnings.append("按单位负反馈处理：输入为开环 L(s)，闭环 T(s)=L/(1+L)；Bode/Nyquist 与根轨迹针对开环。")
+
     tf = TransferFunction(num=num, den=den)
     poles = tf.poles()
     zeros = tf.zeros()
+
+    tf_open = TransferFunction(num=open_num, den=open_den) if unity_mode else tf
+    open_poles = tf_open.poles()
+    open_zeros = tf_open.zeros()
 
     if not tf.is_proper:
         warnings.append("传递函数不是真分式（分子次数高于分母），已做多项式除法，阶跃响应仅展示严格真分式部分。")
@@ -251,15 +264,23 @@ def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
     )
 
     frequency_data = compute_frequency(
-        num,
-        den,
-        poles,
-        zeros,
+        open_num if unity_mode else num,
+        open_den if unity_mode else den,
+        open_poles if unity_mode else poles,
+        open_zeros if unity_mode else zeros,
         omega_min=payload.options.omega_min,
         omega_max=payload.options.omega_max,
+        scope="open" if unity_mode else "closed",
     )
     if verdict != "stable":
         warnings.append("系统非渐近稳定，幅值/相角裕度仅反映曲线形状，不能作为稳定结论。")
+    frequency_note = frequency_data.note
+    if not unity_mode:
+        closed_note = (
+            "当前对象是闭环传递函数：曲线为闭环频率特性，γ/Kg 是闭环指标；"
+            "经典稳定裕度定义在开环 L(s) 上，请用「单位负反馈」模块。"
+        )
+        frequency_note = f"{closed_note} {frequency_note}" if frequency_note else closed_note
     frequency = FrequencyInfo(
         bode=BodeInfo(
             omega=frequency_data.omega,
@@ -277,15 +298,20 @@ def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
         phase_crossover=frequency_data.phase_crossover,
         gain_margin_db=frequency_data.gain_margin_db,
         phase_margin_deg=frequency_data.phase_margin_deg,
-        note=frequency_data.note,
+        scope="open" if unity_mode else "closed",
+        note=frequency_note,
     )
 
-    if tf.is_proper:
+    locus_num = open_num if unity_mode else num
+    locus_den = open_den if unity_mode else den
+    locus_poles = open_poles if unity_mode else poles
+    locus_zeros = open_zeros if unity_mode else zeros
+    if tf_open.is_proper:
         locus_data = compute_root_locus(
-            num,
-            den,
-            poles,
-            zeros,
+            locus_num,
+            locus_den,
+            locus_poles,
+            locus_zeros,
             k_min=payload.options.k_min,
             k_max=payload.options.k_max,
         )
@@ -302,16 +328,33 @@ def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
     root_locus = RootLocusInfo(
         branches=locus_data.branches,
         gains=locus_data.gains,
-        open_loop_poles=[ComplexNumber(re=round(p.real, 9), im=round(p.imag, 9)) for p in poles],
-        open_loop_zeros=[ComplexNumber(re=round(z.real, 9), im=round(z.imag, 9)) for z in zeros],
+        open_loop_poles=[ComplexNumber(re=round(p.real, 9), im=round(p.imag, 9)) for p in locus_poles],
+        open_loop_zeros=[ComplexNumber(re=round(z.real, 9), im=round(z.imag, 9)) for z in locus_zeros],
         k_min=locus_data.k_min,
         k_max=locus_data.k_max,
         critical_gain=locus_data.critical_gain,
         note=locus_data.note,
     )
 
+    open_loop_info = None
+    if unity_mode:
+        open_loop_info = TransferFunctionInfo(
+            num=list(tf_open.num),
+            den=list(tf_open.den),
+            num_degree=tf_open.num_degree,
+            den_degree=tf_open.den_degree,
+            is_proper=tf_open.is_proper,
+            is_strictly_proper=tf_open.is_strictly_proper,
+            num_expr=tf_open.num_expr(),
+            den_expr=tf_open.den_expr(),
+            formula=tf_open.formula(),
+            quotient_expr=None,
+        )
+
     return AnalyzeResponse(
         transfer_function=tf_info,
+        analysis_mode="unity" if unity_mode else "closed",
+        open_loop=open_loop_info,
         poles=[ComplexNumber(re=round(p.real, 9), im=round(p.imag, 9)) for p in poles],
         zeros=[ComplexNumber(re=round(z.real, 9), im=round(z.imag, 9)) for z in zeros],
         stability=stability,

@@ -23,6 +23,7 @@ class FrequencyData:
     phase_crossover: float | None
     gain_margin_db: float | None
     phase_margin_deg: float | None
+    scope: str = "closed"
     note: str | None = None
 
 
@@ -63,6 +64,7 @@ def compute_frequency(
     omega_min: float | None = None,
     omega_max: float | None = None,
     points: int = 400,
+    scope: str = "closed",
 ) -> FrequencyData:
     if omega_min is None or omega_max is None:
         default_min, default_max = auto_omega_range(poles, zeros)
@@ -110,5 +112,6 @@ def compute_frequency(
         phase_crossover=None if phase_crossover is None else round(phase_crossover, 6),
         gain_margin_db=None if gain_margin is None else round(gain_margin, 4),
         phase_margin_deg=None if phase_margin is None else round(phase_margin, 4),
+        scope=scope,
         note=note,
     )

@@ -50,11 +50,20 @@ class AnalyzeRequest(BaseModel):
     den: list[float] | None = Field(default=None, min_length=1, description="分母系数，降幂")
     formula: str | None = Field(default=None, description="传递函数表达式，如 K/(s*(s+1))")
     diagram: DiagramInfo | None = Field(default=None, description="系统结构框图")
+    analysis_mode: Literal["closed", "unity"] = Field(
+        default="closed",
+        description=(
+            "closed=输入即闭环传递函数；"
+            "unity=输入开环传递函数 L(s)，按单位负反馈 T=L/(1+L) 求闭环"
+        ),
+    )
     params: dict[str, float] = Field(default_factory=dict, description="公式/环节中的未知参数取值")
     options: AnalyzeOptions = Field(default_factory=AnalyzeOptions)
 
     @model_validator(mode="after")
     def _check_source(self) -> "AnalyzeRequest":
+        if self.analysis_mode == "unity" and self.diagram is not None:
+            raise ValueError("框图模式自带闭环求解，不能同时指定 analysis_mode=unity")
         if self.formula and self.formula.strip():
             return self
         if self.diagram is not None:
@@ -157,6 +166,10 @@ class FrequencyInfo(BaseModel):
     phase_crossover: float | None = None
     gain_margin_db: float | None = None
     phase_margin_deg: float | None = None
+    scope: Literal["closed", "open"] = Field(
+        default="closed",
+        description="曲线对应的对象：closed=闭环频率特性，open=开环（裕度只有 open 才有经典意义）",
+    )
     note: str | None = None
 
 
@@ -194,6 +207,11 @@ class MasonInfo(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     transfer_function: TransferFunctionInfo
+    analysis_mode: Literal["closed", "unity"] = "closed"
+    open_loop: TransferFunctionInfo | None = Field(
+        default=None,
+        description="unity 模式下输入的开环传递函数 L(s)；frequency 与 root_locus 都是针对它算的",
+    )
     poles: list[ComplexNumber]
     zeros: list[ComplexNumber]
     stability: StabilityInfo

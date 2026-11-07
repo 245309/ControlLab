@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api.routes import router as api_router
 
-APP_VERSION = "0.5.1"
+APP_VERSION = "0.6.0"
 
 
 def _frontend_dist() -> Path:

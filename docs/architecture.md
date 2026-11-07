@@ -38,6 +38,22 @@ M1 的所有信息都依赖同一组系数：稳定性、极点、阶跃响应�
 
 `core` 不依赖 FastAPI，可以直接在脚本里 `from app.core.stability import build_routh_table` 复用。
 
+## 两种分析口径（v0.6）
+
+`analysis_mode` 决定「用户输入的那个传递函数」被当作什么：
+
+| 模式 | 输入 | 闭环 T(s) | Bode / Nyquist / γ、Kg | 根轨迹 |
+| --- | --- | --- | --- | --- |
+| `closed`（默认） | 闭环 T(s) | 就是输入 | 画输入（闭环曲线），γ/Kg 仅作参考并加提示 | 把输入当开环，`D+K·N=0` |
+| `unity` | 开环 L(s) | `N/(D+N)`（`poly_add(den, num)`） | **画开环 L**，`scope="open"` | 开环 L，`D+K·N=0` |
+
+`unity` 模式在 `analyzer.py` 里只做一件事：把输入的 `num/den` 存成 `open_num/open_den`，
+再令 `num, den = open_num, poly_add(den, num)` 作为闭环，之后**稳定性/时域/极点零点用闭环**、
+**频域/根轨迹用开环**，两条链路各走各的，互不污染。
+
+这样处理的原因：教材里「闭环稳定 ⟺ 开环满足 Nyquist/Routh 条件」是两条不同的判据，
+把闭环曲线的 0 dB/−180° 穿越当成开环裕度是常见错误；分模块后每种口径都能自证。
+
 ## 算法决策
 
 ### 1. Routh-Hurwitz：精确有理数 + ε 法 + 全零行特判
