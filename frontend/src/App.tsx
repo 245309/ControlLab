@@ -410,8 +410,13 @@ export default function App() {
           meta={data.analysis_mode === "unity" ? "开环 L(s)：D(s)+K·N(s)=0" : "D(s)+K·N(s)=0（把输入当开环）"}
         />
         <div className="chart-grid">
-          <RootLocusChart locus={data.root_locus} />
-          <PoleZeroChart poles={data.poles} zeros={data.zeros} />
+          <RootLocusChart locus={data.root_locus} openLoop={data.analysis_mode === "unity"} />
+          <PoleZeroChart
+            poles={data.poles}
+            zeros={data.zeros}
+            title={data.analysis_mode === "unity" ? "闭环极零点分布" : "极点零点分布"}
+            tag={data.analysis_mode === "unity" ? "闭环 T · s 平面" : "s 平面"}
+          />
         </div>
       </section>
     </>

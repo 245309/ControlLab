@@ -7,6 +7,8 @@ import { useEChart } from "./useEChart";
 
 interface RootLocusChartProps {
   locus: RootLocusInfo;
+  /** 单位负反馈模式：这里的极点/零点就是开环 L(s) 的极点/零点 */
+  openLoop?: boolean;
 }
 
 const BRANCH_COLORS = ["#4f46e5", "#0ea5e9", "#0d9488", "#d97706", "#7c3aed", "#e11d48"];
@@ -21,7 +23,10 @@ function niceSpan(raw: number): number {
   return step * base;
 }
 
-export function RootLocusChart({ locus }: RootLocusChartProps) {
+export function RootLocusChart({ locus, openLoop = false }: RootLocusChartProps) {
+  const poleName = openLoop ? "开环 L 极点" : "开环极点";
+  const zeroName = openLoop ? "开环 L 零点" : "开环零点";
+
   const option = useMemo<EChartsOption>(() => {
     const points: number[][] = [];
     for (const branch of locus.branches) {
@@ -121,13 +126,23 @@ export function RootLocusChart({ locus }: RootLocusChartProps) {
       tooltip: {
         trigger: "item",
         formatter: (params: any) => {
-          if (params.seriesType !== "line") {
-            return params.seriesName;
+          const point = params.data as [number, number] | undefined;
+          const coords =
+            Array.isArray(point) && point.length === 2
+              ? `<br/>σ = ${formatNumber(point[0], 4)}<br/>jω = ${formatNumber(point[1], 4)}`
+              : "";
+          if (params.seriesType === "line") {
+            const gain = locus.gains[params.dataIndex];
+            const gainText = gain === undefined ? "" : `<br/>K ≈ ${formatNumber(gain, 4)}`;
+            return `${params.seriesName}${coords}${gainText}`;
           }
-          const [re, im] = params.data as [number, number];
-          const gain = locus.gains[params.dataIndex];
-          const gainText = gain === undefined ? "" : `<br/>K ≈ ${formatNumber(gain, 4)}`;
-          return `${params.seriesName}<br/>σ = ${formatNumber(re, 4)}<br/>jω = ${formatNumber(im, 4)}${gainText}`;
+          if (params.seriesName === "临界增益") {
+            const gainText =
+              locus.critical_gain === null ? "" : `<br/>K ≈ ${formatNumber(locus.critical_gain, 4)}`;
+            return `临界增益（虚轴穿越点）${coords}${gainText}`;
+          }
+          const note = params.seriesName === zeroName ? `${zeroName}（K→0 的终点）` : `${poleName}（K→0 的起点）`;
+          return `${note}${coords}`;
         },
       },
       xAxis: {
@@ -158,7 +173,7 @@ export function RootLocusChart({ locus }: RootLocusChartProps) {
         ...branchSeries,
         ...crossingSeries,
         {
-          name: "开环极点",
+          name: poleName,
           type: "scatter",
           symbol: "diamond",
           symbolSize: 12,
@@ -166,7 +181,7 @@ export function RootLocusChart({ locus }: RootLocusChartProps) {
           itemStyle: { color: "#e11d48", borderColor: "#fff", borderWidth: 1 },
         },
         {
-          name: "开环零点",
+          name: zeroName,
           type: "scatter",
           symbol: "circle",
           symbolSize: 11,
@@ -189,8 +204,9 @@ export function RootLocusChart({ locus }: RootLocusChartProps) {
       </div>
       <div ref={ref} className="chart chart-locus" />
       <div className="card-foot">
-        <span>红菱为开环极点（K→0）</span>
-        <span>蓝圈为开环零点</span>
+        <span>红菱为{poleName}（K→0）</span>
+        <span>蓝圈为{zeroName}</span>
+        <span>把鼠标移到极点/零点上可看坐标</span>
         {locus.critical_gain !== null ? (
           <span>临界增益 K ≈ {formatNumber(locus.critical_gain, 4)}</span>
         ) : (

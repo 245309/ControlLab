@@ -8,6 +8,10 @@ import { useEChart } from "./useEChart";
 interface PoleZeroChartProps {
   poles: ComplexNumber[];
   zeros: ComplexNumber[];
+  /** 卡片标题；单位负反馈模式下传入「闭环极零点分布」 */
+  title?: string;
+  /** 卡片右上角标签 */
+  tag?: string;
 }
 
 interface AxisRange {
@@ -40,7 +44,12 @@ function computeRange(poles: ComplexNumber[], zeros: ComplexNumber[]): AxisRange
   return { minX: -spanX, maxX: spanX, minY: -spanY, maxY: spanY };
 }
 
-export function PoleZeroChart({ poles, zeros }: PoleZeroChartProps) {
+export function PoleZeroChart({
+  poles,
+  zeros,
+  title = "极点零点分布",
+  tag = "s 平面",
+}: PoleZeroChartProps) {
   const range = useMemo(() => computeRange(poles, zeros), [poles, zeros]);
 
   const option = useMemo<EChartsOption>(
@@ -133,8 +142,8 @@ export function PoleZeroChart({ poles, zeros }: PoleZeroChartProps) {
   return (
     <section className="card chart-card">
       <div className="card-head">
-        <h2 className="card-title">极点零点分布</h2>
-        <span className="card-tag">s 平面</span>
+        <h2 className="card-title">{title}</h2>
+        <span className="card-tag">{tag}</span>
       </div>
       <div ref={ref} className="chart chart-square" />
       <div className="card-foot">
